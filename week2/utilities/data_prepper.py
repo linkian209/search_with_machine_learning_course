@@ -6,6 +6,7 @@ import pandas as pd
 import query_utils as qu
 from opensearchpy import RequestError
 import os
+import json
 
 # from importlib import reload
 
@@ -233,7 +234,9 @@ class DataPrepper:
                                                 self.ltr_store_name,
                                                 size=len(query_doc_ids), terms_field=terms_field)
         # IMPLEMENT_START --
-        print("IMPLEMENT ME: __log_ltr_query_features: Extract log features out of the LTR:EXT response and place in a data frame")
+        #print("IMPLEMENT ME: __log_ltr_query_features: Extract log features out of the LTR:EXT response and place in a data frame")
+        response = self.opensearch.search(body=log_query, index=self.index_name)
+
         # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  Also capture and return all query/doc pairs that didn't return features
         # Your structure should look like the data frame below
         feature_results = {}
@@ -242,13 +245,43 @@ class DataPrepper:
         feature_results["sku"] = []
         feature_results["salePrice"] = []
         feature_results["name_match"] = []
-        rng = np.random.default_rng(12345)
-        for doc_id in query_doc_ids:
-            feature_results["doc_id"].append(doc_id)  # capture the doc id so we can join later
+        feature_results["salesRankShortTerm"] = []
+        feature_results["salesRankMediumTerm"] = []
+        feature_results["salesRankLongTerm"] = []
+        for hit in response["hits"]["hits"]:
+            feature_results["doc_id"].append(hit['_id'])  # capture the doc id so we can join later
             feature_results["query_id"].append(query_id)
-            feature_results["sku"].append(doc_id)  # ^^^
-            feature_results["salePrice"].append(rng.random())
-            feature_results["name_match"].append(rng.random())
+            feature_results["sku"].append(hit['_id'])  # ^^^
+            for feature in hit["fields"]["_ltrlog"][0]["log_entry"]:
+                if feature["name"] == "salesRankShortTerm":
+                    if "value" in feature:
+                        feature_results["salesRankShortTerm"].append(feature["value"])
+                    else:
+                        feature_results["salesRankShortTerm"].append(None)
+
+                if feature["name"] == "salesRankMediumTerm":
+                    if "value" in feature:
+                        feature_results["salesRankMediumTerm"].append(feature["value"])
+                    else:
+                        feature_results["salesRankMediumTerm"].append(None)
+
+                if feature["name"] == "salesRankLongTerm":
+                    if "value" in feature:
+                        feature_results["salesRankLongTerm"].append(feature["value"])
+                    else:
+                        feature_results["salesRankLongTerm"].append(None)
+
+                if feature["name"] == "salePrice":
+                    if "value" in feature:
+                        feature_results["salePrice"].append(feature["value"])
+                    else:
+                        feature_results["salePrice"].append(None)
+
+                if feature["name"] == "name_match":
+                    if "value" in feature:
+                        feature_results["name_match"].append(feature["value"])
+                    else:
+                        feature_results["name_match"].append(None)
         frame = pd.DataFrame(feature_results)
         return frame.astype({'doc_id': 'int64', 'query_id': 'int64', 'sku': 'int64'})
         # IMPLEMENT_END

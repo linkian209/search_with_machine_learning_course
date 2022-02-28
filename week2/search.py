@@ -9,6 +9,7 @@ from week2.opensearch import get_opensearch
 
 import week2.utilities.query_utils as qu
 import week2.utilities.ltr_utils as lu
+import json
 
 bp = Blueprint('search', __name__, url_prefix='/search')
 
@@ -94,18 +95,18 @@ def query():
             query_obj = qu.create_simple_baseline(user_query, click_prior, [], sort, sortDir, size=500)  # We moved create_query to a utility class so we could use it elsewhere.
             query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name,
                                                     rescore_size=500, main_query_weight=0)
-            print("Simple LTR q: %s" % query_obj)
+            print("Simple LTR q: %s" % json.dumps(query_obj, indent=4))
         elif model == "ht_LTR":
             query_obj = qu.create_query(user_query, click_prior, [], sort, sortDir, size=500)  # We moved create_query to a utility class so we could use it elsewhere.
             query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name,
                                                     rescore_size=500, main_query_weight=0)
-            print("LTR q: %s" % query_obj)
+            print("LTR q: %s" % json.dumps(query_obj, indent=4))
         elif model == "hand_tuned":
             query_obj = qu.create_query(user_query, click_prior, [], sort, sortDir, size=100)  # We moved create_query to a utility class so we could use it elsewhere.
-            print("Hand tuned q: %s" % query_obj)
+            print("Hand tuned q: %s" % json.dumps(query_obj, indent=4))
         else:
             query_obj = qu.create_simple_baseline(user_query, click_prior, [], sort, sortDir, size=100)  # We moved create_query to a utility class so we could use it elsewhere.
-            print("Plain ol q: %s" % query_obj)
+            print("Plain ol q: %s" % json.dumps(query_obj, indent=4))
     elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
         user_query = request.args.get("query", "*")
         filters_input = request.args.getlist("filter.name")
