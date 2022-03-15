@@ -23,6 +23,8 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     app.config["index_name"] = os.environ.get("INDEX_NAME", "bbuy_products")
+    if 'query_threshold' not in app.config:
+        app.config['query_threshold'] = .5
     
     # ensure the instance folder exists
     try:
