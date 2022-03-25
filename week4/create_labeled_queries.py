@@ -4,10 +4,19 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
 import csv
+import re
 
 # Useful if you want to perform stemming.
 import nltk
 stemmer = nltk.stem.PorterStemmer()
+
+def normalize_query(row: pd.Series):
+    query = row.query
+    query = query.lower()
+    query = re.sub(r'[^\w\s]', ' ', query)
+    query = stemmer.stem(query)
+    row.query = query
+    return row
 
 categories_file_name = r'/workspace/datasets/product_data/categories/categories_0001_abcat0010000_to_pcmcat99300050000.xml'
 
@@ -48,9 +57,19 @@ parents_df = pd.DataFrame(list(zip(categories, parents)), columns =['category', 
 df = pd.read_csv(queries_file_name)[['category', 'query']]
 df = df[df['category'].isin(categories)]
 
-# IMPLEMENT ME: Convert queries to lowercase, and optionally implement other normalization, like stemming.
+# Normalization
+df = df.apply(normalize_query, axis=1)
 
-# IMPLEMENT ME: Roll up categories to ancestors to satisfy the minimum number of queries per category.
+# Do Rolling Up
+if min_queries > 1:
+    loop = True
+    while(loop):
+        loop = False
+        categories_to_replace = df.category.value_counts()[lambda x: x < min_queries].index
+        if len(categories_to_replace):
+            loop = True
+            for category in categories_to_replace:
+                df.loc[df.category == category, 'category'] = parents_df.loc[parents_df.category == category].parent.iloc[0]
 
 # Create labels in fastText format.
 df['label'] = '__label__' + df['category']
